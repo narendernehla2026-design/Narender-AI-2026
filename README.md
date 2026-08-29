@@ -11,11 +11,11 @@ This repository is a production-ready starter for "Narender AI Vault" — a prog
 - PWA manifest and a minimal service worker for offline caching
 - Supabase client wrapper (no secrets in code)
 
-## Setup
+## Setup (Powered by pnpm)
 
-1. Install dependencies
-   ```
-   npm install
+1. Install dependencies:
+   ```bash
+   pnpm install
    ```
 
 2. Environment variables
@@ -29,19 +29,19 @@ This repository is a production-ready starter for "Narender AI Vault" — a prog
    ```
 
 3. Development
-   ```
-   npm run dev
+   ```bash
+   pnpm run dev
    ```
 
 4. Build & Start (production)
-   ```
-   npm run build
-   npm run start
+   ```bash
+   pnpm run build
+   pnpm run start
    ```
 
 5. PWA
-   - The manifest is at `/public/manifest.json`.
-   - A simple service worker is provided at `/public/sw.js`. It is automatically registered client-side (see `app/layout.js`). For advanced offline strategies, replace with Workbox or `next-pwa`.
+- The manifest is at `/public/manifest.json`.
+- A simple service worker is provided at `/public/sw.js`. It is automatically registered client-side (see `app/layout.js`). For advanced offline strategies, replace with Workbox or `next-pwa`.
 
 ## Deployment
 Any platform that supports Next.js works (Vercel, Netlify with adapter, etc.). Ensure environment variables are set in your hosting provider.
