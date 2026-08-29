@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom resets and variables */
+:root{
+  --bg:#071129;
+  --panel:#041025;
+  --muted:#94a3b8;
+  --accent:#06b6d4;
+  --danger:#ef4444;
+}
+
+html,body,#__next { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: #e6eef8;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.bubble {
+  border-radius: 12px;
+  padding: 10px 12px;
+  line-height: 1.3;
+}
