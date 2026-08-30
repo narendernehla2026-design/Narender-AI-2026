@@ -18,20 +18,21 @@ export async function POST(req) {
       })
     }
 
-    // Default Gemini/Generative Language endpoint. Replace if you use a different model/endpoint.
-    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta2/models/assistant-bison-001:generateText'
+    // Correct Gemini 1.5 Flash endpoint supporting standard API key
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`
 
     const payload = {
-      prompt: { text: prompt },
-      temperature: 0.2,
-      candidateCount: 1
+      contents: [
+        {
+          parts: [{ text: prompt }]
+        }
+      ]
     }
 
     const res = await fetch(apiUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${API_KEY}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
     })
@@ -46,24 +47,21 @@ export async function POST(req) {
 
     const data = await res.json()
 
-    // Tolerant extraction for common response shapes
+    // Correct extraction for Gemini 1.5 response structure
     let reply = ''
-    if (Array.isArray(data.candidates) && data.candidates[0]) {
-      const cand = data.candidates[0]
-      if (cand.output && Array.isArray(cand.output)) {
-        reply = cand.output.map(o => (o.content || []).map(c => c.text || '').join('')).join('\n')
-      } else if (cand.content && Array.isArray(cand.content)) {
-        reply = cand.content.map(c => c.text || '').join('\n')
-      } else if (cand.text) {
-        reply = cand.text
-      }
+    if (
+      data.candidates &&
+      data.candidates[0] &&
+      data.candidates[0].content &&
+      data.candidates[0].content.parts &&
+      data.candidates[0].content.parts[0]
+    ) {
+      reply = data.candidates[0].content.parts[0].text
     }
 
-    if (!reply && Array.isArray(data.output) && data.output[0] && Array.isArray(data.output[0].content)) {
-      reply = data.output[0].content.map(c => c.text || '').join('')
+    if (!reply) {
+      reply = JSON.stringify(data)
     }
-
-    if (!reply) reply = JSON.stringify(data)
 
     return new Response(JSON.stringify({ reply }), {
       status: 200,
