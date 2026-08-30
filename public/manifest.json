@@ -1,7 +1,12 @@
 {
-  "name": "Narender AI Vault",
-  "short_name": "NarenderVault",
-  "description": "Secure PWA for AI assistance with voice and screen preview.",
+  "name": "AI Control Workshop",
+  "short_name": "AI Workshop",
+  "description": "AI Control Workshop — compact PWA for mobile device automation and control.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/icons/icon-192.svg",
@@ -15,10 +20,5 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "background_color": "#071129",
-  "theme_color": "#071129",
-  "orientation": "portrait"
+  ]
 }
