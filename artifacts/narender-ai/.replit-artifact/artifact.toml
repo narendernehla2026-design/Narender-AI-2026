@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Narender AI Assistant"
+description = "A premium personal AI workspace for chatting with Gemini, recalling private knowledge, and organizing pinned notes in one installable web app."
+version = "1.0.0"
+id = "artifacts/narender-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26110
+
+[services.development]
+run = "pnpm --filter @workspace/narender-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/narender-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/narender-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26110"
+BASE_PATH = "/"

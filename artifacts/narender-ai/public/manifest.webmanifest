@@ -1,0 +1,17 @@
+{
+  "name": "Narender AI Assistant",
+  "short_name": "Narender AI",
+  "description": "A private thinking space for conversations, projects, and remembered knowledge.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f0e8",
+  "theme_color": "#2d2940",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

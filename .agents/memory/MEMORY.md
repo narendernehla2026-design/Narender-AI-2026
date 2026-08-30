@@ -1,0 +1,1 @@
+- [Workspace package manager](workspace-package-manager.md) — this monorepo’s catalog lockfile requires the newer pnpm runtime and explicit native-build approvals.

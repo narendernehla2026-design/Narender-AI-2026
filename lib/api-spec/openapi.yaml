@@ -1,0 +1,241 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: assistant
+    description: Narender AI workspace operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /assistant/profile:
+    get:
+      operationId: getAssistantProfile
+      tags: [assistant]
+      summary: Get the signed-in user's assistant profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantProfile"
+        "401":
+          description: Authentication required
+    patch:
+      operationId: updateAssistantProfile
+      tags: [assistant]
+      summary: Update the signed-in user's assistant profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantProfile"
+  /assistant/chats:
+    get:
+      operationId: listAssistantChats
+      tags: [assistant]
+      summary: List the signed-in user's recent chats
+      responses:
+        "200":
+          description: Recent chats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssistantChat"
+    post:
+      operationId: createAssistantChat
+      tags: [assistant]
+      summary: Create a new chat session
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantChatInput"
+      responses:
+        "201":
+          description: Created chat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantChat"
+  /assistant/chats/{chatId}/messages:
+    get:
+      operationId: listAssistantMessages
+      tags: [assistant]
+      summary: List messages for a chat
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Chat messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssistantMessage"
+    post:
+      operationId: sendAssistantMessage
+      tags: [assistant]
+      summary: Send a message to Narender AI
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantMessageInput"
+      responses:
+        "200":
+          description: Assistant reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantMessage"
+  /assistant/memory:
+    get:
+      operationId: listAssistantMemory
+      tags: [assistant]
+      summary: List the signed-in user's pinned memory
+      responses:
+        "200":
+          description: Memory items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssistantMemoryItem"
+    post:
+      operationId: createAssistantMemory
+      tags: [assistant]
+      summary: Add a pinned memory item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantMemoryInput"
+      responses:
+        "201":
+          description: Created memory item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantMemoryItem"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    AssistantProfile:
+      type: object
+      required: [id, email, displayName, preferredLanguage, profession, project, plan]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        displayName: { type: string }
+        preferredLanguage: { type: string }
+        profession: { type: string }
+        project: { type: string }
+        plan: { type: string }
+        avatarUrl: { type: ["string", "null"] }
+    AssistantProfileUpdate:
+      type: object
+      properties:
+        displayName: { type: string }
+        preferredLanguage: { type: string }
+        profession: { type: string }
+        project: { type: string }
+    AssistantChat:
+      type: object
+      required: [id, title, updatedAt, messageCount]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        updatedAt: { type: string }
+        messageCount: { type: number }
+    AssistantChatInput:
+      type: object
+      properties:
+        title: { type: string }
+    AssistantMessage:
+      type: object
+      required: [id, chatId, role, content, createdAt]
+      properties:
+        id: { type: string }
+        chatId: { type: string }
+        role:
+          type: string
+          enum: [user, assistant]
+        content: { type: string }
+        createdAt: { type: string }
+    AssistantMessageInput:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1 }
+    AssistantMemoryItem:
+      type: object
+      required: [id, category, title, content, updatedAt]
+      properties:
+        id: { type: string }
+        category:
+          type: string
+          enum: [meeting, code, note]
+        title: { type: string }
+        content: { type: string }
+        updatedAt: { type: string }
+    AssistantMemoryInput:
+      type: object
+      required: [category, title, content]
+      properties:
+        category:
+          type: string
+          enum: [meeting, code, note]
+        title: { type: string }
+        content: { type: string }
+
