@@ -1,1 +1,2 @@
 - [Workspace package manager](workspace-package-manager.md) — this monorepo’s catalog lockfile requires the newer pnpm runtime and explicit native-build approvals.
+- [GitHub push hygiene](github-push-hygiene.md) — GitHub push protection scans all reachable commits, so sanitized snapshots may need a history rewrite before publishing.
