@@ -2,15 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Workshop Clean Theme */
+/* Workshop Clean Theme - updated for stable production-ready palette */
 :root {
-  --bg: #ffffff;
-  --card-bg: #f8f9fa;
-  --border: #e1e4e8;
-  --text-primary: #1f2937;
+  --bg: #f6f8fb;
+  --card-bg: #ffffff;
+  --border: #e6e9ef;
+  --text-primary: #0f172a;
   --text-secondary: #6b7280;
-  --accent-blue: #0066ff;
-  --accent-purple: #8b5cf6;
+  --accent-blue: #0b61ff;
+  --accent-purple: #7c3aed;
   --accent-emerald: #10b981;
 }
 
@@ -18,14 +18,15 @@ html, body, #__next {
   height: 100%;
 }
 
-body {
-  background: var(--bg);
+html, body {
+  background: linear-gradient(180deg, var(--bg) 0%, #ffffff 100%);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
+/* Chat bubbles */
 .bubble {
   border-radius: 12px;
   padding: 12px 16px;
@@ -43,48 +44,46 @@ body {
   color: #ffffff;
 }
 
-/* Button utilities */
-.btn-blue {
-  @apply bg-workshop-blue hover:bg-workshop-blueDark text-white font-medium py-2 px-4 rounded-lg transition-colors;
+/* Button fallbacks */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  border-radius: .5rem;
+  padding: .5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .12s ease, transform .06s ease;
 }
 
-.btn-purple {
-  @apply bg-workshop-purple hover:bg-workshop-purpleDark text-white font-medium py-2 px-4 rounded-lg transition-colors;
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--accent-blue);
+  color: white;
+  border: 1px solid rgba(0,0,0,0.04);
 }
 
-.btn-emerald {
-  @apply bg-workshop-emerald hover:bg-workshop-emeraldDark text-white font-medium py-2 px-4 rounded-lg transition-colors;
+.btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
 }
 
-.card-professional {
-  @apply bg-workshop-card border border-workshop-border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow;
-}
+/* Tailwind utility integrations: keep existing custom classes for vault/workshop */
+.btn-blue { @apply bg-workshop-blue hover:bg-workshop-blueDark text-white font-medium py-2 px-4 rounded-lg transition-colors; }
+.btn-purple { @apply bg-workshop-purple hover:bg-workshop-purpleDark text-white font-medium py-2 px-4 rounded-lg transition-colors; }
+.btn-emerald { @apply bg-workshop-emerald hover:bg-workshop-emeraldDark text-white font-medium py-2 px-4 rounded-lg transition-colors; }
+
+.card-professional { @apply bg-workshop-card border border-workshop-border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow; }
 
 /* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--card-bg);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--card-bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
 
 /* Voice animation */
-@keyframes pulse-mic {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.mic-active {
-  animation: pulse-mic 1s infinite;
-}
+@keyframes pulse-mic { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.mic-active { animation: pulse-mic 1s infinite; }
