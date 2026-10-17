@@ -1,132 +1,582 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Send, Paperclip, Mic, MicOff, User, Pin, Settings, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Brain,
+  LogOut,
+  Menu,
+  MessageCircle,
+  Plus,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  User,
+  X,
+} from 'lucide-react';
 import VoiceControls from '@/components/VoiceControls';
+import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabaseClient';
 
-export default function PremiumPWARedesign() {
-  const [inputMessage, setInputMessage] = useState('');
-  const [messages, setMessages] = useState([
-    { id: 1, role: 'model', text: 'Analyze recent sales data and forecast next quarter\'s trends.' },
-    { id: 2, role: 'system', text: 'Analysis complete. Q3 growth projected at 8%. Key drivers: Q4 marketing campaigns, new product launches. Risk: Supply chain volatility.' }
-  ]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
+const memoryCategories = ['personal', 'work', 'preference', 'project', 'note'];
+const supabaseReady = isSupabaseConfigured();
 
-  const handleSendMessage = async (e) => {
-    if (e) e.preventDefault();
-    if (!inputMessage.trim() || isLoading) return;
+function AuthPanel() {
+  const [method, setMethod] = useState('email');
+  const [creatingAccount, setCreatingAccount] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
 
-    const userText = inputMessage;
-    setInputMessage('');
-    setMessages(prev => [...prev, { id: Date.now(), role: 'user', text: userText }]);
-    setIsLoading(true);
+  async function submit(event) {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    setBusy(true);
 
     try {
-      const response = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: userText }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'model', text: data.reply }]);
-      } else {
-        setMessages(prev => [...prev, { id: Date.now() + 1, role: 'error', text: `त्रुटि: ${data.error || 'कनेक्शन विफल'}` }]);
+      const supabase = getSupabaseClient();
+      if (method === 'email' && resetMode) {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: window.location.origin,
+        });
+        if (resetError) throw resetError;
+        setMessage('If an account uses that address, password reset instructions will arrive by email.');
+        return;
       }
-    } catch (err) {
-      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'error', text: 'त्रुटि: नेटवर्क कनेक्शन विफल हुआ।' }]);
+      if (method === 'phone' && otpSent) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          phone: phone.trim(),
+          token: otp.trim(),
+          type: 'sms',
+        });
+        if (verifyError) throw verifyError;
+        return;
+      }
+
+      if (method === 'phone') {
+        const { error: otpError } = await supabase.auth.signInWithOtp({
+          phone: phone.trim(),
+        });
+        if (otpError) throw otpError;
+        setOtpSent(true);
+        setMessage('A verification code was sent to your phone.');
+        return;
+      }
+
+      if (creatingAccount) {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+        });
+        if (signUpError) throw signUpError;
+        if (!data.session) setMessage('Check your email to confirm your account, then sign in.');
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (signInError) throw signInError;
+      }
+    } catch (authError) {
+      setError(authError?.message || 'Authentication could not be completed.');
     } finally {
-      setIsLoading(false);
+      setBusy(false);
     }
-  };
+  }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 text-slate-800 font-sans max-w-md mx-auto shadow-2xl relative overflow-hidden">
-      <header className="flex items-center justify-between px-5 py-4 bg-white border-b border-slate-100 sticky top-0 z-10 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-md shadow-blue-200">
-            <Sparkles className="w-5 h-5 fill-white" />
-          </div>
-          <div>
-            <h1 className="font-black text-slate-900 text-base tracking-tight">AI Control Workshop</h1>
-            <p className="text-xs font-bold text-slate-400">नरेन्द्र एआई वॉल्ट</p>
-          </div>
-        </div>
-        <button className="p-2.5 bg-slate-100 hover:bg-slate-200 rounded-full transition-all text-slate-600">
-          <Settings className="w-5 h-5" />
-        </button>
-      </header>
+    <main className="auth-shell">
+      <section className="auth-card">
+        <div className="brand-mark"><Sparkles size={22} /></div>
+        <p className="eyebrow">PRIVATE AI WORKSPACE</p>
+        <h1>Welcome to Narender AI</h1>
+        <p className="auth-subtitle">Sign in to keep your conversations and saved context private to your account.</p>
 
-      <main className="flex-1 overflow-y-auto px-4 py-5 space-y-5 pb-36 bg-white">
-        <button className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl transition-all shadow-md shadow-blue-100 flex items-center justify-center gap-2">
-          <span>⚡ NEW CHAT</span>
-        </button>
-
-        <div className="space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`px-4 py-3 rounded-2xl max-w-[90%] text-sm font-semibold shadow-sm ${
-                msg.role === 'user'
-                  ? 'bg-blue-600 text-white rounded-tr-sm'
-                  : msg.role === 'error'
-                  ? 'bg-rose-50 border border-rose-100 text-rose-600 rounded-tl-sm'
-                  : 'bg-slate-50 text-slate-800 rounded-tl-sm border border-slate-100 font-medium'
-              }`}>
-                {msg.text}
-              </div>
-            </div>
-          ))}
+        <div className="auth-tabs" role="tablist" aria-label="Sign-in method">
+          <button type="button" className={method === 'email' ? 'selected' : ''} onClick={() => { setMethod('email'); setError(''); setMessage(''); }}>Email</button>
+          <button type="button" className={method === 'phone' ? 'selected' : ''} onClick={() => { setMethod('phone'); setOtpSent(false); setError(''); setMessage(''); }}>Phone</button>
         </div>
 
-        <section className="bg-slate-900 border border-slate-800 shadow-xl rounded-2xl p-4 space-y-3 text-white">
-          <div className="flex items-center gap-2 pb-1 text-rose-500">
-            <Pin className="w-4 h-4 fill-rose-500 stroke-[2.5]" />
-            <h2 className="font-extrabold text-xs uppercase tracking-wider text-slate-300">Pinned Items</h2>
-          </div>
-          <div className="space-y-1 text-xs font-bold text-slate-200">
-            <p className="p-2 bg-slate-800/60 rounded-lg">Quarterly Forecast Data (PDF)</p>
-            <p className="p-2 bg-slate-800/60 rounded-lg">Market Trend Report (DOCX)</p>
-          </div>
-        </section>
+        <form className="auth-form" onSubmit={submit}>
+          {method === 'email' ? (
+            <>
+              <label>Email address<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label>
+              {!resetMode && <label>Password<input type="password" autoComplete={creatingAccount ? 'new-password' : 'current-password'} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" /></label>}
+            </>
+          ) : (
+            <>
+              <label>Phone number<input type="tel" autoComplete="tel" required value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+1 555 123 4567" disabled={otpSent} /></label>
+              {otpSent && <label>Verification code<input inputMode="numeric" autoComplete="one-time-code" required value={otp} onChange={(event) => setOtp(event.target.value)} placeholder="Enter the code" /></label>}
+            </>
+          )}
 
-        <section className="bg-slate-900 border border-slate-800 shadow-xl rounded-2xl p-4 space-y-3 text-white">
-          <div className="flex items-center gap-2 pb-1 text-blue-400">
-            <User className="w-4 h-4 stroke-[2.5]" />
-            <h2 className="font-extrabold text-xs uppercase tracking-wider text-slate-300">User Memory</h2>
-          </div>
-          <div className="space-y-1.5 text-xs font-bold text-slate-400 pl-1">
-            <p><span className="text-slate-500">Project:</span> Apex Project</p>
-            <p><span className="text-slate-500">Language:</span> Hindi</p>
-            <p><span className="text-slate-500">Developer Profile</span></p>
-          </div>
-        </section>
-      </main>
-
-      <footer className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md p-4 border-t border-slate-100 z-20">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-slate-900 rounded-full p-2 shadow-xl">
-          <input 
-            type="text" 
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder="Ask Narender AI..." 
-            className="w-full bg-transparent py-2.5 pl-4 pr-2 text-sm font-bold outline-none text-white placeholder-slate-500"
-          />
-          <VoiceControls 
-            onTranscript={(text) => setInputMessage(text)} 
-            isListening={isListening} 
-            setIsListening={setIsListening} 
-          />
-          <button 
-            type="submit"
-            disabled={!inputMessage.trim() || isLoading}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-full font-extrabold text-xs tracking-wider transition-all flex items-center gap-1 active:scale-95 disabled:opacity-40"
-          >
-            <span>Send</span>
-            <Send className="w-3 h-3 fill-white" />
+          {(error || message) && <p className={error ? 'form-message error' : 'form-message success'} role="status">{error || message}</p>}
+          <button className="primary-button full-width" type="submit" disabled={busy}>
+            {busy ? 'Please wait…' : method === 'phone' ? (otpSent ? 'Verify code' : 'Send code') : (resetMode ? 'Send secure link' : creatingAccount ? 'Create account' : 'Sign in')}
           </button>
         </form>
-      </footer>
-    </div>
+
+        {method === 'email' && !resetMode && !creatingAccount && (
+          <button className="text-button" type="button" onClick={() => { setResetMode(true); setError(''); setMessage(''); }}>
+            Forgot your password?
+          </button>
+        )}
+        {method === 'email' && !resetMode && (
+          <button className="text-button" type="button" onClick={() => { setCreatingAccount(!creatingAccount); setError(''); setMessage(''); }}>
+            {creatingAccount ? 'Already have an account? Sign in' : 'New here? Create an account'}
+          </button>
+        )}
+        {method === 'email' && resetMode && (
+          <button className="text-button" type="button" onClick={() => { setResetMode(false); setError(''); setMessage(''); }}>
+            Back to sign in
+          </button>
+        )}
+        {method === 'phone' && otpSent && <button className="text-button" type="button" onClick={() => { setOtpSent(false); setOtp(''); setMessage(''); }}>Use a different phone number</button>}
+
+        <div className="privacy-note"><ShieldCheck size={16} /><span>Your account data is isolated by Supabase row-level security.</span></div>
+      </section>
+    </main>
+  );
+}
+
+function PasswordResetPanel({ onComplete }) {
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function updatePassword(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const { error: updateError } = await getSupabaseClient().auth.updateUser({ password });
+      if (updateError) throw updateError;
+      window.history.replaceState({}, '', window.location.pathname);
+      onComplete();
+    } catch (updateError) {
+      setError(updateError?.message || 'Password could not be updated.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-card">
+        <div className="brand-mark"><Sparkles size={22} /></div>
+        <p className="eyebrow">ACCOUNT SECURITY</p>
+        <h1>Choose a new password</h1>
+        <p className="auth-subtitle">Use at least 8 characters. Your password is stored and verified by Supabase Auth.</p>
+        <form className="auth-form" onSubmit={updatePassword}>
+          <label>New password<input type="password" autoComplete="new-password" minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+          {error && <p className="form-message error" role="alert">{error}</p>}
+          <button className="primary-button full-width" type="submit" disabled={busy}>{busy ? 'Updating…' : 'Update password'}</button>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+export default function Home() {
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [chats, setChats] = useState([]);
+  const [activeChatId, setActiveChatId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [memories, setMemories] = useState([]);
+  const [input, setInput] = useState('');
+  const [chatSearch, setChatSearch] = useState('');
+  const [memoryTitle, setMemoryTitle] = useState('');
+  const [memoryContent, setMemoryContent] = useState('');
+  const [memoryCategory, setMemoryCategory] = useState('note');
+  const [loadingWorkspace, setLoadingWorkspace] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [savingMemory, setSavingMemory] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+  const [mobilePanel, setMobilePanel] = useState('');
+  const bottomRef = useRef(null);
+  const draftId = useRef(0);
+  const authUserId = useRef(null);
+
+  useEffect(() => {
+    if (!supabaseReady) {
+      setAuthReady(true);
+      return undefined;
+    }
+
+    const supabase = getSupabaseClient();
+    let active = true;
+    supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      if (!active) return;
+      if (sessionError) setError('Unable to restore your sign-in session.');
+      setSession(data?.session || null);
+      authUserId.current = data?.session?.user?.id || null;
+      setPasswordRecovery(window.location.hash.includes('type=recovery'));
+      setAuthReady(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      const nextUserId = nextSession?.user?.id || null;
+      if (authUserId.current !== nextUserId) {
+        setChats([]);
+        setMemories([]);
+        setMessages([]);
+        setActiveChatId(null);
+      }
+      authUserId.current = nextUserId;
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
+      setSession(nextSession);
+      setError('');
+      setNotice('');
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const apiFetch = useCallback(async (url, options = {}) => {
+    if (!session?.access_token) throw new Error('Your session has expired. Sign in again.');
+    const headers = new Headers(options.headers || {});
+    headers.set('Authorization', `Bearer ${session.access_token}`);
+    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+
+    const response = await fetch(url, { ...options, headers, cache: 'no-store' });
+    if (response.status === 204) return null;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'The request could not be completed.');
+    return data;
+  }, [session?.access_token]);
+
+  const refreshWorkspace = useCallback(async () => {
+    if (!session?.access_token) {
+      setChats([]);
+      setMemories([]);
+      setMessages([]);
+      setActiveChatId(null);
+      return;
+    }
+
+    setLoadingWorkspace(true);
+    setError('');
+    try {
+      const [chatResult, memoryResult] = await Promise.all([
+        apiFetch('/api/chats'),
+        apiFetch('/api/memory'),
+      ]);
+      setChats(chatResult.chats || []);
+      setMemories(memoryResult.memories || []);
+      setActiveChatId((current) =>
+        chatResult.chats?.some((chat) => chat.id === current)
+          ? current
+          : chatResult.chats?.[0]?.id || null,
+      );
+    } catch (loadError) {
+      setError(loadError.message);
+    } finally {
+      setLoadingWorkspace(false);
+    }
+  }, [apiFetch, session?.access_token]);
+
+  useEffect(() => {
+    void refreshWorkspace();
+  }, [refreshWorkspace]);
+
+  useEffect(() => {
+    if (!activeChatId || !session?.access_token) {
+      setMessages([]);
+      return undefined;
+    }
+
+    let active = true;
+    setMessages([]);
+    apiFetch(`/api/chats/${activeChatId}/messages`)
+      .then((result) => { if (active) setMessages(result.messages || []); })
+      .catch((loadError) => { if (active) setError(loadError.message); });
+    return () => { active = false; };
+  }, [activeChatId, apiFetch, session?.access_token]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages, sending]);
+
+  const activeChat = chats.find((chat) => chat.id === activeChatId);
+  const visibleChats = useMemo(() => {
+    const query = chatSearch.trim().toLowerCase();
+    return query ? chats.filter((chat) => chat.title.toLowerCase().includes(query)) : chats;
+  }, [chats, chatSearch]);
+
+  async function createChat() {
+    setError('');
+    try {
+      const result = await apiFetch('/api/chats', {
+        method: 'POST',
+        body: JSON.stringify({ title: 'New conversation' }),
+      });
+      setChats((current) => [result.chat, ...current]);
+      setActiveChatId(result.chat.id);
+      setMessages([]);
+      setMobilePanel('');
+    } catch (createError) {
+      setError(createError.message);
+    }
+  }
+
+  async function sendMessage(event) {
+    event?.preventDefault();
+    const content = input.trim();
+    if (!content || sending) return;
+
+    let chatId = activeChatId;
+    setError('');
+    setNotice('');
+
+    try {
+      if (!chatId) {
+        const created = await apiFetch('/api/chats', {
+          method: 'POST',
+          body: JSON.stringify({ title: content.replace(/\s+/g, ' ').slice(0, 72) }),
+        });
+        chatId = created.chat.id;
+        setChats((current) => [created.chat, ...current]);
+      }
+
+      const optimisticId = `draft-${++draftId.current}`;
+      setMessages((current) => [...current, {
+        id: optimisticId,
+        role: 'user',
+        content,
+        created_at: new Date().toISOString(),
+      }]);
+      setInput('');
+      setSending(true);
+
+      const result = await apiFetch(`/api/chats/${chatId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ content }),
+      });
+      setActiveChatId(chatId);
+      setMessages((current) => [
+        ...current.filter((message) => message.id !== optimisticId),
+        { id: `user-${optimisticId}`, role: 'user', content, created_at: new Date().toISOString() },
+        result.message,
+      ]);
+      setChats((current) => current
+        .map((chat) => chat.id === chatId ? { ...chat, title: result.title, updated_at: new Date().toISOString() } : chat)
+        .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)));
+    } catch (sendError) {
+      setError(sendError.message);
+      if (chatId) {
+        setActiveChatId(chatId);
+        apiFetch(`/api/chats/${chatId}/messages`)
+          .then((result) => setMessages(result.messages || []))
+          .catch(() => {});
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function saveMemory(event) {
+    event.preventDefault();
+    setSavingMemory(true);
+    setError('');
+    try {
+      const result = await apiFetch('/api/memory', {
+        method: 'POST',
+        body: JSON.stringify({
+          category: memoryCategory,
+          title: memoryTitle,
+          content: memoryContent,
+        }),
+      });
+      setMemories((current) => [result.memory, ...current]);
+      setMemoryTitle('');
+      setMemoryContent('');
+      setNotice('Saved to your private memory.');
+    } catch (saveError) {
+      setError(saveError.message);
+    } finally {
+      setSavingMemory(false);
+    }
+  }
+
+  async function deleteMemory(memoryId) {
+    setError('');
+    try {
+      await apiFetch(`/api/memory/${memoryId}`, { method: 'DELETE' });
+      setMemories((current) => current.filter((memory) => memory.id !== memoryId));
+    } catch (deleteError) {
+      setError(deleteError.message);
+    }
+  }
+
+  async function signOut() {
+    const { error: signOutError } = await getSupabaseClient().auth.signOut();
+    if (signOutError) setError('Sign out could not be completed. Please retry.');
+  }
+
+  if (!authReady) {
+    return <main className="auth-shell"><div className="loading-card">Loading your private workspace…</div></main>;
+  }
+
+  if (!supabaseReady) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-card setup-card">
+          <div className="brand-mark"><Sparkles size={22} /></div>
+          <p className="eyebrow">DEPLOYMENT SETUP</p>
+          <h1>Connect your private workspace</h1>
+          <p className="auth-subtitle">Add <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in your hosting environment to enable sign-in and private storage.</p>
+          <p className="privacy-note"><ShieldCheck size={16} /><span>Do not add a service-role key to the browser or commit keys to the repository.</span></p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!session) return <AuthPanel />;
+  if (passwordRecovery) {
+    return <PasswordResetPanel onComplete={() => { setPasswordRecovery(false); setNotice('Your password has been updated.'); }} />;
+  }
+
+  return (
+    <main className="workspace">
+      {mobilePanel && <button className="drawer-backdrop" aria-label="Close panel" onClick={() => setMobilePanel('')} />}
+
+      <aside className={`sidebar chat-sidebar ${mobilePanel === 'chats' ? 'drawer-open' : ''}`}>
+        <div className="brand-lockup">
+          <div className="brand-mark small"><Sparkles size={18} /></div>
+          <div><strong>Narender AI</strong><span>PRIVATE WORKSPACE</span></div>
+          <button className="icon-button close-drawer" aria-label="Close conversations" onClick={() => setMobilePanel('')}><X size={18} /></button>
+        </div>
+
+        <button className="primary-button new-chat-button" onClick={createChat}><Plus size={17} /> New conversation</button>
+        <label className="search-field"><span className="sr-only">Search conversations</span><input value={chatSearch} onChange={(event) => setChatSearch(event.target.value)} placeholder="Search conversations" /></label>
+        <div className="list-heading"><span>RECENT CONVERSATIONS</span><span>{chats.length}</span></div>
+        <nav className="chat-list" aria-label="Recent conversations">
+          {visibleChats.map((chat) => (
+            <button key={chat.id} className={`chat-list-item ${chat.id === activeChatId ? 'active' : ''}`} onClick={() => { setActiveChatId(chat.id); setMobilePanel(''); }}>
+              <MessageCircle size={15} />
+              <span><strong>{chat.title}</strong><small>{new Date(chat.updated_at).toLocaleDateString()}</small></span>
+            </button>
+          ))}
+          {!visibleChats.length && <p className="empty-list">{loadingWorkspace ? 'Loading conversations…' : 'No conversations yet.'}</p>}
+        </nav>
+
+        <div className="account-card">
+          <div className="avatar"><User size={17} /></div>
+          <div className="account-details"><strong>{session.user?.email || session.user?.phone || 'Your account'}</strong><span>Private account</span></div>
+          <button className="icon-button" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={17} /></button>
+        </div>
+      </aside>
+
+      <section className="conversation">
+        <header className="conversation-header">
+          <button className="icon-button mobile-only" aria-label="Open conversations" onClick={() => setMobilePanel('chats')}><Menu size={20} /></button>
+          <div className="conversation-title">
+            <span className="eyebrow">ACTIVE THREAD</span>
+            <h1>{activeChat?.title || 'Your private assistant'}</h1>
+          </div>
+          <button className="context-toggle icon-button" aria-label="Open saved memory" onClick={() => setMobilePanel('memory')}><Brain size={19} /></button>
+        </header>
+
+        {error && <div className="notice error-notice" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error"><X size={15} /></button></div>}
+        {notice && <div className="notice success-notice" role="status">{notice}<button onClick={() => setNotice('')} aria-label="Dismiss message"><X size={15} /></button></div>}
+
+        <div className="messages-scroll">
+          {messages.length ? (
+            <div className="message-stack">
+              {messages.map((message) => (
+                <article key={message.id} className={`message-row ${message.role === 'user' ? 'from-user' : 'from-assistant'}`}>
+                  {message.role !== 'user' && <div className="assistant-avatar"><Sparkles size={15} /></div>}
+                  <div className="message-content">
+                    <div className="message-bubble">{message.content}</div>
+                    <time>{new Date(message.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</time>
+                  </div>
+                </article>
+              ))}
+              {sending && <div className="thinking-indicator"><span /><span /><span /> Narender AI is thinking</div>}
+              <div ref={bottomRef} />
+            </div>
+          ) : (
+            <div className="welcome-state">
+              <div className="welcome-icon"><Sparkles size={25} /></div>
+              <p className="eyebrow">YOUR PRIVATE AI</p>
+              <h2>{loadingWorkspace ? 'Loading your workspace…' : 'What would you like to work on?'}</h2>
+              <p>Your conversations and saved context are private to your account. Start a conversation or add a memory for more personalized help.</p>
+              <button className="suggestion-chip" onClick={createChat}><Plus size={15} /> Start a conversation</button>
+            </div>
+          )}
+        </div>
+
+        <form className="composer" onSubmit={sendMessage}>
+          <textarea
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                void sendMessage();
+              }
+            }}
+            placeholder="Think out loud…"
+            aria-label="Message Narender AI"
+            maxLength={6000}
+            disabled={sending}
+          />
+          <div className="composer-footer">
+            <span className="composer-hint"><span className="status-dot" /> Context-aware <span className="character-count">{input.length}/6000</span></span>
+            <div className="composer-actions">
+              <VoiceControls onTranscript={(transcript) => setInput((current) => `${current}${current ? ' ' : ''}${transcript}`)} isListening={listening} setIsListening={setListening} />
+              <button className="send-button" type="submit" disabled={!input.trim() || sending} aria-label="Send message">{sending ? <span className="spinner" /> : <Send size={17} />}</button>
+            </div>
+          </div>
+          <p className="composer-footnote">Enter to send · Shift + Enter for a new line · AI responses may be inaccurate</p>
+        </form>
+      </section>
+
+      <aside className={`sidebar memory-sidebar ${mobilePanel === 'memory' ? 'drawer-open' : ''}`}>
+        <div className="memory-header">
+          <div><span className="eyebrow">CONTEXT LAYER</span><h2>What I remember</h2></div>
+          <button className="icon-button close-drawer" aria-label="Close saved memory" onClick={() => setMobilePanel('')}><X size={18} /></button>
+        </div>
+        <p className="memory-explainer">Saved context is only used to personalize your account’s assistant.</p>
+
+        <form className="memory-form" onSubmit={saveMemory}>
+          <label>Category
+            <select value={memoryCategory} onChange={(event) => setMemoryCategory(event.target.value)}>
+              {memoryCategories.map((category) => <option key={category} value={category}>{category[0].toUpperCase() + category.slice(1)}</option>)}
+            </select>
+          </label>
+          <label>Title<input value={memoryTitle} onChange={(event) => setMemoryTitle(event.target.value)} placeholder="e.g. Current project" maxLength={120} required /></label>
+          <label>Memory<textarea value={memoryContent} onChange={(event) => setMemoryContent(event.target.value)} placeholder="What should your assistant remember?" maxLength={2000} rows={3} required /></label>
+          <button className="secondary-button full-width" type="submit" disabled={savingMemory || !memoryTitle.trim() || !memoryContent.trim()}><Plus size={15} /> {savingMemory ? 'Saving…' : 'Save memory'}</button>
+        </form>
+
+        <div className="list-heading memory-list-heading"><span>YOUR MEMORIES</span><span>{memories.length}</span></div>
+        <div className="memory-list">
+          {memories.map((memory) => (
+            <article className="memory-card" key={memory.id}>
+              <div className="memory-card-top"><span className={`memory-tag tag-${memory.category}`}>{memory.category}</span><button className="icon-button delete-button" aria-label={`Delete ${memory.title}`} onClick={() => deleteMemory(memory.id)}><Trash2 size={15} /></button></div>
+              <h3>{memory.title}</h3>
+              <p>{memory.content}</p>
+              <time>{new Date(memory.updated_at).toLocaleDateString()}</time>
+            </article>
+          ))}
+          {!memories.length && <p className="empty-list">No saved memories yet. Add context above when it would help.</p>}
+        </div>
+        <div className="memory-private-note"><ShieldCheck size={15} /> Private to your account</div>
+      </aside>
+    </main>
   );
 }

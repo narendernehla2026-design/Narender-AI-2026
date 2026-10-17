@@ -1,44 +1,65 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 
 export default function VoiceControls({ onTranscript, isListening, setIsListening }) {
-  const [recognition, setRecognition] = useState(null);
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef(onTranscript);
+  const setListeningRef = useRef(setIsListening);
+  const [supported, setSupported] = useState(false);
 
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.lang = 'hi-IN';
-
-      rec.onstart = () => setIsListening(true);
-      rec.onend = () => setIsListening(false);
-      rec.onresult = (e) => {
-        const text = e.results.transcript;
-        if (onTranscript) onTranscript(text);
-      };
-      setRecognition(rec);
-    }
+    transcriptRef.current = onTranscript;
+    setListeningRef.current = setIsListening;
   }, [onTranscript, setIsListening]);
 
-  const toggleVoice = () => {
-    if (!recognition) return alert("ब्राउज़र सपोर्टेड नहीं है।");
-    isListening ? recognition.stop() : recognition.start();
-  };
+  useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return undefined;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'hi-IN';
+    recognition.onstart = () => setListeningRef.current?.(true);
+    recognition.onend = () => setListeningRef.current?.(false);
+    recognition.onerror = () => setListeningRef.current?.(false);
+    recognition.onresult = (event) => {
+      const transcript = event.results?.[event.resultIndex]?.[0]?.transcript;
+      if (transcript) transcriptRef.current?.(transcript.trim());
+    };
+
+    recognitionRef.current = recognition;
+    setSupported(true);
+    return () => {
+      recognition.onresult = null;
+      recognition.stop();
+      recognitionRef.current = null;
+    };
+  }, []);
+
+  function toggleVoice() {
+    if (!recognitionRef.current) return;
+    try {
+      if (isListening) recognitionRef.current.stop();
+      else recognitionRef.current.start();
+    } catch {
+      setListeningRef.current?.(false);
+    }
+  }
 
   return (
     <button
       type="button"
       onClick={toggleVoice}
-      className={`p-2.5 rounded-full transition-all active:scale-95 flex items-center justify-center ${
-        isListening 
-          ? 'bg-rose-600 text-white animate-pulse' 
-          : 'bg-gradient-to-tr from-purple-600 to-indigo-600 text-white shadow-md'
-      }`}
+      disabled={!supported}
+      aria-label={supported ? (isListening ? 'Stop voice input' : 'Start voice input') : 'Voice input is not supported in this browser'}
+      title={supported ? (isListening ? 'Stop voice input' : 'Start voice input') : 'Voice input is not supported in this browser'}
+      className={`voice-button ${isListening ? 'listening' : ''}`}
     >
-      {isListening ? <MicOff className="w-4 h-4 stroke-[2.5]" /> : <Mic className="w-4 h-4 stroke-[2.5]" />}
+      {isListening ? <MicOff size={16} /> : <Mic size={16} />}
     </button>
   );
 }

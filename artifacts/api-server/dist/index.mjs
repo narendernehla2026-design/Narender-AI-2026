@@ -54328,13 +54328,19 @@ async function getRequestContext(req) {
   const url = process.env.SUPABASE_URL;
   const anonKey = process.env.SUPABASE_ANON_KEY;
   const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!url || !anonKey || !token) {
+  if (!url || !anonKey) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SUPABASE_CONFIGURATION_REQUIRED");
+    }
     return {
       userId: PREVIEW_USER_ID,
       email: PREVIEW_EMAIL,
       client: null,
       isPreview: true
     };
+  }
+  if (!token) {
+    throw new Error("AUTHENTICATION_REQUIRED");
   }
   const client = createClient(url, anonKey, {
     global: { headers: { Authorization: `Bearer ${token}` } }
@@ -54473,6 +54479,14 @@ function handleError2(res, error) {
     res.status(401).json({ error: "Authentication required" });
     return;
   }
+  if (error instanceof Error && error.message === "SUPABASE_CONFIGURATION_REQUIRED") {
+    res.status(503).json({ error: "Supabase is not configured" });
+    return;
+  }
+  if (error instanceof Error && error.message === "GEMINI_CONFIGURATION_REQUIRED") {
+    res.status(503).json({ error: "The AI service is not configured" });
+    return;
+  }
   logger.error({ err: error }, "Assistant request failed");
   res.status(500).json({ error: "Assistant request failed" });
 }
@@ -54596,19 +54610,21 @@ router2.post("/assistant/chats/:chatId/messages", async (req, res) => {
       "Use the profile and knowledge base only when relevant. Be concise, practical, and preserve the user's preferred language when appropriate."
     ].join("\n");
     const apiKey = process.env.GEMINI_API_KEY;
-    let answer = "Gemini is not configured yet. Add GEMINI_API_KEY to enable model responses.";
-    if (apiKey) {
-      const gemini = new GoogleGenerativeAI(apiKey);
-      const model = gemini.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
-      const chat = model.startChat({
-        history: (historyResult.data ?? []).map((message) => ({
-          role: message.role === "user" ? "user" : "model",
-          parts: [{ text: String(message.content) }]
-        }))
-      });
-      const result = await chat.sendMessage(body.content);
-      answer = result.response.text();
+    if (!apiKey && process.env.NODE_ENV === "production") {
+      res.status(503).json({ error: "The AI service is not configured" });
+      return;
     }
+    if (!apiKey) throw new Error("GEMINI_CONFIGURATION_REQUIRED");
+    const gemini = new GoogleGenerativeAI(apiKey);
+    const model = gemini.getGenerativeModel({ model: "gemini-2.5-flash", systemInstruction });
+    const chat = model.startChat({
+      history: (historyResult.data ?? []).map((message) => ({
+        role: message.role === "user" ? "user" : "model",
+        parts: [{ text: String(message.content) }]
+      }))
+    });
+    const result = await chat.sendMessage(body.content);
+    const answer = result.response.text();
     const { data, error } = await context.client.from("messages").insert({
       chat_id: params.chatId,
       user_id: context.userId,

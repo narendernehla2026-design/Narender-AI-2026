@@ -1,47 +1,63 @@
-// Minimal service worker for asset caching and offline fallback.
-const CACHE_NAME = 'narender-ai-vault-v1'
-const OFFLINE_URL = '/offline.html'
-const ASSETS_TO_CACHE = [
-  '/',
+const CACHE_NAME = 'narender-ai-shell-v2';
+const OFFLINE_URL = '/offline.html';
+const PRECACHE = [
   '/manifest.json',
   '/icons/icon-192.svg',
   '/icons/icon-512.svg',
-  OFFLINE_URL
-]
+  OFFLINE_URL,
+];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE)
-    })
-  )
-  self.skipWaiting()
-})
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)));
+  self.skipWaiting();
+});
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)))
-    )
-  )
-  self.clients.claim()
-})
+      Promise.all(
+        keys
+          .filter((key) => key.startsWith('narender-ai-shell-') && key !== CACHE_NAME)
+          .map((key) => caches.delete(key)),
+      ),
+    ),
+  );
+  self.clients.claim();
+});
 
 self.addEventListener('fetch', (event) => {
-  const { request } = event
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Never intercept API traffic or cache private/user-specific responses.
+  if (
+    request.method !== 'GET' ||
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith('/api/')
+  ) return;
+
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => caches.match(OFFLINE_URL))
-    )
-    return
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    return;
   }
+
+  const isImmutableAsset =
+    url.pathname.startsWith('/_next/static/') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname === '/manifest.json' ||
+    url.pathname === OFFLINE_URL;
+  if (!isImmutableAsset) return;
+
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request).then((res) => {
-      if (request.method === 'GET' && res && res.status === 200) {
-        const copy = res.clone()
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
-      }
-      return res
-    }).catch(() => caches.match(OFFLINE_URL)))
-  )
-})
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+      return fetch(request).then((response) => {
+        if (response.ok && response.type === 'basic') {
+          const copy = response.clone();
+          void caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+        }
+        return response;
+      });
+    }),
+  );
+});

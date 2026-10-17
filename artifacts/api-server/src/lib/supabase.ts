@@ -18,13 +18,20 @@ export async function getRequestContext(req: Request): Promise<{
   const anonKey = process.env.SUPABASE_ANON_KEY;
   const token = req.header("authorization")?.replace(/^Bearer\s+/i, "");
 
-  if (!url || !anonKey || !token) {
+  if (!url || !anonKey) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SUPABASE_CONFIGURATION_REQUIRED");
+    }
     return {
       userId: PREVIEW_USER_ID,
       email: PREVIEW_EMAIL,
       client: null,
       isPreview: true,
     };
+  }
+
+  if (!token) {
+    throw new Error("AUTHENTICATION_REQUIRED");
   }
 
   const client = createClient(url, anonKey, {

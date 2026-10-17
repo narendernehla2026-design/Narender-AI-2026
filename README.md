@@ -1,59 +1,56 @@
-# Narender AI Vault (Next.js PWA)
+# Narender AI Assistant
 
-This repository is a production-ready starter for "Narender AI Vault" — a progressive web app built with Next.js (App Router), Tailwind CSS, and PWA features (manifest + service worker). It includes modular React components for a left sidebar, central chat area with voice + screen preview, and a right sidebar for user memory & pinned items. Supabase integration points are included and use environment variables.
+Narender AI is a private AI workspace with Supabase authentication, user-scoped conversations and memories, Gemini responses, and an installable PWA. The root Next.js app is the Vercel deployment target. The `artifacts/` packages provide the Replit web preview and shared API service.
 
-## Features
-- Next.js App Router project structure
-- Tailwind CSS for styling and theming
-- Lucide React icons
-- Voice input UI (Web Speech API)
-- Screen preview UI (getDisplayMedia)
-- PWA manifest and a minimal service worker for offline caching
-- Supabase client wrapper (no secrets in code)
+## Production setup
 
-## Setup (Powered by pnpm)
+### 1. Configure environment variables
 
-1. Install dependencies:
-   ```bash
-   pnpm install
-   ```
+Set these values in the Vercel project’s Production environment. Add the same values to Preview/Development only if those environments should connect to the same Supabase project.
 
-2. Environment variables
-   Create a `.env.local` at project root and add:
+| Variable | Where it is used |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Browser Supabase Auth client |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Browser Supabase Auth client; use the publishable/anon key only |
+| `GEMINI_API_KEY` | Server-side Gemini API route; never prefix this with `NEXT_PUBLIC_` |
 
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-   # For server-side secret usage (do NOT commit):
-   # SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-   ```
+For the separate Replit API service, also configure `SUPABASE_URL` and `SUPABASE_ANON_KEY`. Never use a Supabase service-role key in the browser or in this app’s normal request path. Keep all real values in the hosting provider’s secret/environment settings; do not commit `.env.local`.
 
-3. Development
-   ```bash
-   pnpm run dev
-   ```
+Copy `.env.example` to `.env.local` for local development.
 
-4. Build & Start (production)
-   ```bash
-   pnpm run build
-   pnpm run start
-   ```
+### 2. Apply the Supabase migration
 
-5. PWA
-- The manifest is at `/public/manifest.json`.
-- A simple service worker is provided at `/public/sw.js`. It is automatically registered client-side (see `app/layout.js`). For advanced offline strategies, replace with Workbox or `next-pwa`.
+Run `supabase/migrations/20261017000000_assistant.sql` in the Supabase SQL editor or through your normal migration process. It creates the chat, message, memory, and rate-limit tables; enables owner-only row-level security; and installs the per-account assistant request limit.
+
+Enable the Email provider in Supabase Auth. For phone sign-in, configure an SMS provider and the allowed phone-number regions. Add the deployed Vercel URL to Supabase Auth’s Site URL and redirect URL allow list.
+
+### 3. Build and run
+
+```bash
+pnpm install
+pnpm build
+pnpm start
+```
+
+The root `pnpm build` command runs the Next.js production build. The Replit Vite artifact can be checked separately:
+
+```bash
+pnpm --filter @workspace/narender-ai run typecheck
+PORT=26110 BASE_PATH=/ pnpm --filter @workspace/narender-ai run build
+pnpm --filter @workspace/api-server run build
+pnpm --filter @workspace/mockup-sandbox run typecheck
+```
 
 ## Deployment
-Any platform that supports Next.js works (Vercel, Netlify with adapter, etc.). Ensure environment variables are set in your hosting provider.
 
-## Security
-- Never store secret keys in the client bundle.
-- Use server-only env vars for privileged Supabase operations.
-- The provided auth in earlier examples is intentionally minimal; replace with robust authentication (Supabase Auth, OAuth, or similar) for production.
+Connect the GitHub repository to Vercel and use the repository root as the project root. Vercel detects the Next.js app and uses `pnpm build`. Add the environment variables above, then deploy. Supabase migrations are not run automatically by the web build; apply them before enabling user access.
 
-## Extending
-- Replace the in-memory chat with a DB-backed store via Supabase.
-- Add server-side AI integration (OpenAI, private LLM) through secure server routes.
-- Add E2E encryption for chat content for higher security if required.
+## Security and data handling
 
----
+- Every API route that reads or writes user data validates the Supabase access token.
+- Requests use the user’s Supabase JWT and anon key; database row-level security enforces per-user ownership.
+- Gemini requests are server-side, authenticated, limited per user, capped by input length, and use a request timeout.
+- The PWA service worker does not intercept or cache `/api/` responses.
+- The browser receives only the Supabase publishable/anon key. No service-role key is required.
+
+The setup page remains visible when the public Supabase variables are missing. Production API calls fail explicitly rather than switching to sample or shared preview data.
