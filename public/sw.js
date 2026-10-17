@@ -1,9 +1,10 @@
-const CACHE_NAME = 'narender-ai-shell-v2';
+const CACHE_NAME = 'smart-ai-shell-v1';
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [
   '/manifest.json',
-  '/icons/icon-192.svg',
-  '/icons/icon-512.svg',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/smart-ai.svg',
   OFFLINE_URL,
 ];
 
@@ -17,7 +18,10 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key.startsWith('narender-ai-shell-') && key !== CACHE_NAME)
+          .filter((key) =>
+            (key.startsWith('narender-ai-shell-') || key.startsWith('smart-ai-shell-')) &&
+            key !== CACHE_NAME,
+          )
           .map((key) => caches.delete(key)),
       ),
     ),

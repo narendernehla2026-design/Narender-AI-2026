@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientTransform="translate(188 126) rotate(53) scale(423)">
+      <stop stop-color="#29245b"/>
+      <stop offset="0.56" stop-color="#121735"/>
+      <stop offset="1" stop-color="#080a1b"/>
+    </radialGradient>
+    <linearGradient id="india" x1="149" y1="95" x2="350" y2="422" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffad67"/>
+      <stop offset="0.45" stop-color="#f4f5ff"/>
+      <stop offset="1" stop-color="#54e3e8"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="55" y1="67" x2="455" y2="450" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#63e7ed"/>
+      <stop offset="0.52" stop-color="#8a74ff"/>
+      <stop offset="1" stop-color="#ff9d68"/>
+    </linearGradient>
+    <filter id="glow" x="80" y="48" width="352" height="430" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="7"/>
+    </filter>
+    <clipPath id="disc">
+      <circle cx="256" cy="256" r="224"/>
+    </clipPath>
+  </defs>
+  <circle cx="256" cy="256" r="252" fill="#080a1b"/>
+  <circle cx="256" cy="256" r="239" fill="url(#bg)" stroke="url(#rim)" stroke-width="5"/>
+  <circle cx="256" cy="256" r="222" stroke="#96a4ff" stroke-opacity=".22" stroke-width="2"/>
+  <g clip-path="url(#disc)" opacity=".62">
+    <path d="M75 145h72l18 18h31M367 123h42l25 25v25M384 321h38l26-26v-24M91 351h44l19-19" stroke="#73e7ee" stroke-opacity=".36" stroke-width="2"/>
+    <circle cx="147" cy="145" r="4" fill="#65e7ee"/>
+    <circle cx="409" cy="123" r="4" fill="#a78bff"/>
+    <circle cx="422" cy="321" r="4" fill="#ffad67"/>
+    <circle cx="135" cy="351" r="4" fill="#65e7ee"/>
+  </g>
+  <path d="M203 76l22 8 19-10 19 7 13 17 21-3 17 15 24 4 17 17-10 14 14 14-11 15 16 15-10 17 14 18-12 15 8 18-16 13 1 21-17 13-8 21-17 16-7 21-17 17-12 25-17 20-15 20-16 14-15-13-8-24-15-15-7-22-17-17-3-20-16-16-4-21-17-15-8-22 9-16-13-17 11-17-12-17 13-16-8-18 14-14 4-20 17-8 7-19 19-8 8-19 20-5 12-17 21-4z" fill="url(#india)" fill-opacity=".96" stroke="#d5fbff" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M203 76l22 8 19-10 19 7 13 17 21-3 17 15 24 4 17 17-10 14 14 14-11 15 16 15-10 17 14 18-12 15 8 18-16 13 1 21-17 13-8 21-17 16-7 21-17 17-12 25-17 20-15 20-16 14-15-13-8-24-15-15-7-22-17-17-3-20-16-16-4-21-17-15-8-22 9-16-13-17 11-17-12-17 13-16-8-18 14-14 4-20 17-8 7-19 19-8 8-19 20-5 12-17 21-4z" stroke="#6fe5f0" stroke-opacity=".5" stroke-width="13" filter="url(#glow)"/>
+  <g stroke="#132250" stroke-linecap="round" stroke-width="4" opacity=".85">
+    <path d="M210 165h26l12 12v20M302 170h-19l-12 12v15M205 254h20l11-11v-18M310 247h-20l-11 11v18M247 314v-18l10-10h22M267 135v15"/>
+  </g>
+  <g fill="#121a42" stroke="#44dbe7" stroke-width="2">
+    <circle cx="236" cy="165" r="5"/><circle cx="302" cy="170" r="5"/>
+    <circle cx="205" cy="254" r="5"/><circle cx="310" cy="247" r="5"/>
+    <circle cx="279" cy="314" r="5"/><circle cx="267" cy="135" r="5"/>
+  </g>
+  <circle cx="256" cy="225" r="34" stroke="#26366c" stroke-width="3"/>
+  <circle cx="256" cy="225" r="27" stroke="#24336b" stroke-width="2"/>
+  <path d="M256 193v64M224 225h64M233 202l46 46M279 202l-46 46M244 195l24 60M286 213l-60 24M268 195l-24 60M226 213l60 24" stroke="#26366c" stroke-width="2"/>
+  <circle cx="256" cy="225" r="5" fill="#273773"/>
+  <g fill="#a8f9ff">
+    <circle cx="105" cy="235" r="2"/><circle cx="392" cy="204" r="2"/>
+    <circle cx="344" cy="395" r="2"/><circle cx="157" cy="389" r="2"/>
+    <circle cx="367" cy="348" r="2"/><circle cx="132" cy="182" r="2"/>
+  </g>
+</svg>

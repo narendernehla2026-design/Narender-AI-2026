@@ -2,14 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowUpRight,
   Brain,
+  HelpCircle,
+  FolderLock,
   LogOut,
   Menu,
   MessageCircle,
   Plus,
+  Shield,
   Send,
   ShieldCheck,
   Sparkles,
+  Smartphone,
   Trash2,
   User,
   X,
@@ -93,9 +98,9 @@ function AuthPanel() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="brand-mark"><Sparkles size={22} /></div>
+        <img className="brand-mark" src="/icons/smart-ai.svg" alt="Smart AI logo" />
         <p className="eyebrow">PRIVATE AI WORKSPACE</p>
-        <h1>Welcome to Narender AI</h1>
+        <h1>Welcome to Smart AI</h1>
         <p className="auth-subtitle">Sign in to keep your conversations and saved context private to your account.</p>
 
         <div className="auth-tabs" role="tablist" aria-label="Sign-in method">
@@ -169,7 +174,7 @@ function PasswordResetPanel({ onComplete }) {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <div className="brand-mark"><Sparkles size={22} /></div>
+        <img className="brand-mark" src="/icons/smart-ai.svg" alt="Smart AI logo" />
         <p className="eyebrow">ACCOUNT SECURITY</p>
         <h1>Choose a new password</h1>
         <p className="auth-subtitle">Use at least 8 characters. Your password is stored and verified by Supabase Auth.</p>
@@ -203,6 +208,7 @@ export default function Home() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [mobilePanel, setMobilePanel] = useState('');
+  const [activeSection, setActiveSection] = useState('home');
   const bottomRef = useRef(null);
   const draftId = useRef(0);
   const authUserId = useRef(null);
@@ -254,7 +260,12 @@ export default function Home() {
     const response = await fetch(url, { ...options, headers, cache: 'no-store' });
     if (response.status === 204) return null;
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || 'The request could not be completed.');
+      if (!response.ok) {
+        const requestError = new Error(data.error || 'The request could not be completed.');
+        requestError.code = data.code;
+        requestError.status = response.status;
+        throw requestError;
+      }
     return data;
   }, [session?.access_token]);
 
@@ -311,6 +322,7 @@ export default function Home() {
   }, [messages, sending]);
 
   const activeChat = chats.find((chat) => chat.id === activeChatId);
+  const isAdmin = session?.user?.app_metadata?.role === 'admin';
   const visibleChats = useMemo(() => {
     const query = chatSearch.trim().toLowerCase();
     return query ? chats.filter((chat) => chat.title.toLowerCase().includes(query)) : chats;
@@ -327,14 +339,15 @@ export default function Home() {
       setActiveChatId(result.chat.id);
       setMessages([]);
       setMobilePanel('');
+      setActiveSection('conversation');
     } catch (createError) {
       setError(createError.message);
     }
   }
 
-  async function sendMessage(event) {
+  async function sendMessage(event, spokenPrompt) {
     event?.preventDefault();
-    const content = input.trim();
+    const content = (typeof spokenPrompt === 'string' ? spokenPrompt : input).trim();
     if (!content || sending) return;
 
     let chatId = activeChatId;
@@ -360,6 +373,7 @@ export default function Home() {
       }]);
       setInput('');
       setSending(true);
+      setActiveSection('conversation');
 
       const result = await apiFetch(`/api/chats/${chatId}/messages`, {
         method: 'POST',
@@ -455,8 +469,8 @@ export default function Home() {
 
       <aside className={`sidebar chat-sidebar ${mobilePanel === 'chats' ? 'drawer-open' : ''}`}>
         <div className="brand-lockup">
-          <div className="brand-mark small"><Sparkles size={18} /></div>
-          <div><strong>Narender AI</strong><span>PRIVATE WORKSPACE</span></div>
+          <img className="brand-mark small" src="/icons/smart-ai.svg" alt="" />
+          <div><strong>Smart AI</strong><span>PRIVATE COMPANION</span></div>
           <button className="icon-button close-drawer" aria-label="Close conversations" onClick={() => setMobilePanel('')}><X size={18} /></button>
         </div>
 
@@ -475,7 +489,7 @@ export default function Home() {
 
         <div className="account-card">
           <div className="avatar"><User size={17} /></div>
-          <div className="account-details"><strong>{session.user?.email || session.user?.phone || 'Your account'}</strong><span>Private account</span></div>
+          <div className="account-details"><strong>{session.user?.email || session.user?.phone || 'Your account'}</strong><span>{isAdmin ? 'Administrator' : 'User account'}</span></div>
           <button className="icon-button" onClick={signOut} aria-label="Sign out" title="Sign out"><LogOut size={17} /></button>
         </div>
       </aside>
@@ -485,7 +499,7 @@ export default function Home() {
           <button className="icon-button mobile-only" aria-label="Open conversations" onClick={() => setMobilePanel('chats')}><Menu size={20} /></button>
           <div className="conversation-title">
             <span className="eyebrow">ACTIVE THREAD</span>
-            <h1>{activeChat?.title || 'Your private assistant'}</h1>
+            <h1>{activeSection === 'home' ? 'Your private companion' : activeChat?.title || 'Your private assistant'}</h1>
           </div>
           <button className="context-toggle icon-button" aria-label="Open saved memory" onClick={() => setMobilePanel('memory')}><Brain size={19} /></button>
         </header>
@@ -493,8 +507,39 @@ export default function Home() {
         {error && <div className="notice error-notice" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error"><X size={15} /></button></div>}
         {notice && <div className="notice success-notice" role="status">{notice}<button onClick={() => setNotice('')} aria-label="Dismiss message"><X size={15} /></button></div>}
 
-        <div className="messages-scroll">
-          {messages.length ? (
+        <div className={`messages-scroll ${activeSection === 'home' ? 'home-scroll' : ''}`}>
+          {activeSection === 'home' ? (
+            <section className="home-dashboard" aria-label="Smart AI home">
+              <div className="home-greeting">
+                <p className="eyebrow">YOUR PRIVATE COMPANION</p>
+                <h2>Good to see you<span>.</span></h2>
+                <p>One place for the things you think, plan, and want remembered.</p>
+              </div>
+              <div className={`voice-orbit ${listening ? 'is-listening' : ''}`}>
+                <div className="orbit-ring orbit-ring-one" />
+                <div className="orbit-ring orbit-ring-two" />
+                <div className="voice-orbit-core"><Sparkles size={23} /></div>
+                <VoiceControls onTranscript={(transcript) => { void sendMessage(null, transcript); }} isListening={listening} setIsListening={setListening} disabled={sending} />
+              </div>
+              <div className={`voice-waveform ${listening ? 'active' : ''}`} aria-hidden="true">
+                {Array.from({ length: 17 }, (_, index) => <span key={index} />)}
+              </div>
+              <div className="voice-caption" aria-live="polite">
+                <strong>{sending ? 'Smart AI is responding…' : listening ? 'Smart AI Listening...' : 'Talk to Smart AI'}</strong>
+                <span>{listening ? 'Speak naturally. A pause sends your command.' : 'Tap the mic to start hands-free voice commands'}</span>
+              </div>
+              <div className="home-actions">
+                {isAdmin && <button className="action-tile admin-tile" type="button" onClick={() => { setInput('Help me understand the admin tools available in my account.'); setActiveSection('conversation'); }}><span className="tile-icon"><Shield size={18} /></span><strong>Admin Control</strong><small>Account guidance</small><ArrowUpRight className="tile-arrow" size={14} /></button>}
+                <button className="action-tile phone-tile" type="button" onClick={() => { setInput('Guide me through a phone setting or task, one step at a time.'); setActiveSection('conversation'); }}><span className="tile-icon"><Smartphone size={18} /></span><strong>Phone Control</strong><small>Guided help, in chat</small><ArrowUpRight className="tile-arrow" size={14} /></button>
+                <button className="action-tile vault-tile" type="button" onClick={() => setMobilePanel('memory')}><span className="tile-icon"><FolderLock size={18} /></span><strong>File Vault</strong><small>Private saved context</small><ArrowUpRight className="tile-arrow" size={14} /></button>
+                <button className="action-tile voice-tile" type="button" onClick={() => { document.querySelector('.voice-orbit .voice-button')?.click(); }}><span className="tile-icon"><HelpCircle size={18} /></span><strong>Voice Assistant</strong><small>{listening ? 'Listening to you' : 'Hands-free commands'}</small><ArrowUpRight className="tile-arrow" size={14} /></button>
+              </div>
+              <div className="home-lower">
+                <div className="home-section-title"><div><span className="eyebrow">PICK UP WHERE YOU LEFT OFF</span><h3>Recent conversations</h3></div><button type="button" onClick={() => { setActiveSection('conversation'); setMobilePanel('chats'); }}>View all</button></div>
+                {chats.slice(0, 2).length ? <div className="recent-picks">{chats.slice(0, 2).map((chat) => <button type="button" key={chat.id} onClick={() => { setActiveChatId(chat.id); setActiveSection('conversation'); }}><span className="recent-icon"><MessageCircle size={15} /></span><span><strong>{chat.title}</strong><small>{new Date(chat.updated_at).toLocaleDateString()}</small></span><ArrowUpRight className="recent-chevron" size={15} /></button>)}</div> : <p className="home-empty">Your first conversation is one message away.</p>}
+              </div>
+            </section>
+          ) : messages.length ? (
             <div className="message-stack">
               {messages.map((message) => (
                 <article key={message.id} className={`message-row ${message.role === 'user' ? 'from-user' : 'from-assistant'}`}>
@@ -505,12 +550,12 @@ export default function Home() {
                   </div>
                 </article>
               ))}
-              {sending && <div className="thinking-indicator"><span /><span /><span /> Narender AI is thinking</div>}
+              {sending && <div className="thinking-indicator"><span /><span /><span /> Smart AI is thinking</div>}
               <div ref={bottomRef} />
             </div>
           ) : (
             <div className="welcome-state">
-              <div className="welcome-icon"><Sparkles size={25} /></div>
+              <img className="welcome-icon" src="/icons/smart-ai.svg" alt="Smart AI logo" />
               <p className="eyebrow">YOUR PRIVATE AI</p>
               <h2>{loadingWorkspace ? 'Loading your workspace…' : 'What would you like to work on?'}</h2>
               <p>Your conversations and saved context are private to your account. Start a conversation or add a memory for more personalized help.</p>
@@ -530,14 +575,13 @@ export default function Home() {
               }
             }}
             placeholder="Think out loud…"
-            aria-label="Message Narender AI"
+            aria-label="Message Smart AI"
             maxLength={6000}
             disabled={sending}
           />
           <div className="composer-footer">
             <span className="composer-hint"><span className="status-dot" /> Context-aware <span className="character-count">{input.length}/6000</span></span>
             <div className="composer-actions">
-              <VoiceControls onTranscript={(transcript) => setInput((current) => `${current}${current ? ' ' : ''}${transcript}`)} isListening={listening} setIsListening={setListening} />
               <button className="send-button" type="submit" disabled={!input.trim() || sending} aria-label="Send message">{sending ? <span className="spinner" /> : <Send size={17} />}</button>
             </div>
           </div>
@@ -577,6 +621,13 @@ export default function Home() {
         </div>
         <div className="memory-private-note"><ShieldCheck size={15} /> Private to your account</div>
       </aside>
+
+      <nav className="mobile-nav" aria-label="Main navigation">
+        <button type="button" className={activeSection === 'home' ? 'selected' : ''} onClick={() => { setActiveSection('home'); setMobilePanel(''); }}><Sparkles size={18} /><span>Home</span></button>
+        <button type="button" className={activeSection === 'conversation' ? 'selected' : ''} onClick={() => { setActiveSection('conversation'); setMobilePanel('chats'); }}><MessageCircle size={18} /><span>Chats</span></button>
+        <button type="button" className={mobilePanel === 'memory' ? 'selected' : ''} onClick={() => setMobilePanel('memory')}><Brain size={18} /><span>Memory</span></button>
+        <button type="button" onClick={signOut}><LogOut size={18} /><span>Sign out</span></button>
+      </nav>
     </main>
   );
 }

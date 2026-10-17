@@ -1,23 +1,38 @@
 {
   "id": "/",
-  "name": "Narender AI Assistant",
-  "short_name": "Narender AI",
-  "description": "A private AI workspace for conversations, personal context, and saved memories.",
+  "name": "Smart AI",
+  "short_name": "Smart AI",
+  "description": "A private AI companion for conversations, voice commands, and saved context.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f7f4f0",
-  "theme_color": "#2c203c",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0b0c21",
+  "theme_color": "#101229",
   "orientation": "portrait-primary",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
-      "src": "/icons/icon-192.svg",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.svg",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/smart-ai.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
     }

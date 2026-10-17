@@ -58,8 +58,14 @@ export async function POST(request, { params }) {
   );
   if (ownershipError) return ownershipError;
 
-  const apiKey = process.env.GEMINI_API_KEY || process.env.GENERATIVE_AI_API_KEY;
-  if (!apiKey) return apiError('The AI service is not configured for this deployment.', 503);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return apiError(
+      'Smart AI is not connected yet. Add the server-side GEMINI_API_KEY in your hosting settings.',
+      503,
+      'GEMINI_NOT_CONFIGURED',
+    );
+  }
 
   let body;
   try {
@@ -127,7 +133,7 @@ export async function POST(request, { params }) {
         body: JSON.stringify({
           systemInstruction: {
             parts: [{
-              text: `You are Narender AI, a helpful private personal assistant. Use the user's saved context only when relevant. Treat the context as private user-provided information.\n\nSaved context:\n${memoryContext || 'No saved context.'}`,
+              text: `You are Smart AI, a helpful private personal assistant. Use the user's saved context only when relevant. Treat the context as private user-provided information.\n\nSaved context:\n${memoryContext || 'No saved context.'}`,
             }],
           },
           contents: history,
@@ -137,27 +143,65 @@ export async function POST(request, { params }) {
       },
     );
   } catch (error) {
-    console.error('Gemini request failed:', error?.name || 'network error');
-    return apiError('The AI service did not respond. Please try again.', 502);
+    const timedOut = error?.name === 'TimeoutError' || error?.name === 'AbortError';
+    console.error('Gemini request failed:', timedOut ? 'timeout' : 'network error');
+    return apiError(
+      timedOut
+        ? 'Gemini took too long to respond. Please try again.'
+        : 'Gemini could not be reached. Check your connection and try again.',
+      timedOut ? 504 : 502,
+      timedOut ? 'GEMINI_TIMEOUT' : 'GEMINI_UNAVAILABLE',
+    );
   }
 
   if (!geminiResponse.ok) {
     console.error('Gemini returned HTTP status:', geminiResponse.status);
-    return apiError('The AI service could not complete this request.', 502);
+    if (geminiResponse.status === 401 || geminiResponse.status === 403) {
+      return apiError(
+        'Gemini rejected the server key. Verify GEMINI_API_KEY in the hosting settings.',
+        503,
+        'GEMINI_CREDENTIALS_INVALID',
+      );
+    }
+    if (geminiResponse.status === 429) {
+      return apiError(
+        'Gemini is limiting requests right now. Wait a moment and try again.',
+        429,
+        'GEMINI_RATE_LIMITED',
+      );
+    }
+    if (geminiResponse.status === 400 || geminiResponse.status === 404) {
+      return apiError(
+        'Gemini rejected this request. Try a shorter message or check the model configuration.',
+        502,
+        'GEMINI_REQUEST_REJECTED',
+      );
+    }
+    return apiError(
+      'Gemini is temporarily unavailable. Please try again shortly.',
+      502,
+      'GEMINI_UNAVAILABLE',
+    );
   }
 
   let responseData;
   try {
     responseData = await geminiResponse.json();
   } catch {
-    return apiError('The AI service returned an invalid response.', 502);
+    return apiError('Gemini returned an invalid response. Please try again.', 502, 'GEMINI_INVALID_RESPONSE');
   }
 
   const answer = responseData?.candidates?.[0]?.content?.parts
     ?.map((part) => part.text || '')
     .join('')
     .trim();
-  if (!answer) return apiError('The AI service returned no answer. Please try again.', 502);
+  if (!answer) {
+    return apiError(
+      'Gemini could not produce an answer for that message. Please rephrase and try again.',
+      502,
+      'GEMINI_EMPTY_RESPONSE',
+    );
+  }
 
   const { data: savedMessage, error: saveError } = await context.supabase
     .from('assistant_messages')
