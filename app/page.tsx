@@ -1,5 +1,4 @@
-// app/page.tsx
-import ChatDashboard from './components/ChatDashboard';
+import ChatDashboard from "./components/ChatDashboard";
 
 export default function Page() {
   return (
